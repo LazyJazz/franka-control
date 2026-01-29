@@ -230,7 +230,7 @@ def main():
     R, t = controller.ee_pose()
 
 
-    controller.reset_to_pose(np.array([-0.08129526674747467, -0.09338368475437164, 0.02063392661511898, -2.354853630065918, 0.002519397297874093, 2.2613837718963623, 0.7223608493804932]), duration=3.0)
+    controller.reset_to_pose(np.array([-0.08129526674747467, -0.09338368475437164, 0.02063392661511898, -2.354853630065918, 0.002519397297874093, 2.2613837718963623, 0.223608493804932]), duration=3.0)
     # for i in range(10):
     #     targ_q = np.array([-0.0377, -0.1855,  0.0390, -2.3545,  0.0050,  2.1693,  0.7897])
     #     # add random angle of 10 degrees to every joint
@@ -247,7 +247,7 @@ def main():
 
     # print(f"End-effector position: {rotation_matrix_to_axis_angle(R), t}")
 
-    controller.show_torque_log()
+    # controller.show_torque_log()
 
     # for _ in trange(100000):
     #     controller.move_at_velocity(np.array([0.0, 0.1, 0.0, 0.0, 0.0, 0.0]))
