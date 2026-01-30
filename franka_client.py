@@ -29,6 +29,19 @@ class FrankaClient:
         message = json.dumps({"type": "set", "targ_pos": targ_pos.tolist()})
         await self.websocket.send(message)
 
+    async def reset(self):
+        await self.ensure_connect()
+        message = json.dumps({"type": "setq", "q_targ": [-0.08129526674747467, -0.09338368475437164, 0.02063392661511898, -2.354853630065918, 0.002519397297874093, 2.2613837718963623, 0.723608493804932]})
+        await self.websocket.send(message)
+        response = await self.websocket.recv()
+        data = json.loads(response)
+        return np.array(data["ee_pos"]), np.array(data["targ_pos"])
+    
+    async def close(self):
+        if self.websocket is not None:
+            await self.websocket.close()
+            self.websocket = None
+
 async def main():
 
     import argparse
@@ -69,11 +82,18 @@ async def main():
             move_vel[2] = (axis_5 - axis_2) * 0.05  # Scale to max 0.1 m/s
 
               # if button 1 pressed, terminate
+
+            if joystick.get_button(3):
+                ee_pos, targ_pos = await client.reset()
+                print(f"Robot reset. End-effector position: {ee_pos}, Target position: {targ_pos}")
+
             if joystick.get_button(1):
                 print("Exiting joystick control.")
+                await client.close()
                 break
 
         new_targ_pos = targ_pos + move_vel * dur
+        print(f"Setting new target position: {new_targ_pos}")
         await client.set_pos(new_targ_pos)
 
 if __name__ == "__main__":

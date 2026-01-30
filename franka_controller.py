@@ -195,6 +195,33 @@ class FrankaController:
         tau_d = tau_task + coriolis
 
         self.apply_torque(tau_d)
+    
+    def apply_q(self, q_targ, duration=3.0):
+        state, dur = self.active_controller.readOnce()
+        start_q = np.array(state.q)
+
+        t = 0.0
+        joint_stiffness = np.array([50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0])
+        joint_damping = np.array([14.0, 14.0, 14.0, 14.0, 14.0, 14.0, 14.0])
+        while t < duration:
+            state, dur = self.active_controller.readOnce()
+            t += dur.to_sec()
+            alpha = min(t / duration, 1.0)
+            q_desired = (1 - alpha) * start_q + alpha * q_targ
+
+            q = np.array(state.q)
+            dq = np.array(state.dq)
+
+            coriolis = np.array(self.model.coriolis(state))
+
+            position_error = q_desired - q
+            tau_task = joint_stiffness * position_error - joint_damping * dq
+
+            tau_d = tau_task + coriolis
+
+            self.apply_torque(tau_d)
+        
+        self.cur_targ_pos = self.ee_pose()[1]
 
 def main():
     parser = argparse.ArgumentParser(description="Connect to Franka Emika Panda robot")
@@ -206,6 +233,7 @@ def main():
 
     pygame.init()
     pygame.joystick.init()
+    controller.apply_q(np.array([-0.08129526674747467, -0.09338368475437164, 0.02063392661511898, -2.354853630065918, 0.002519397297874093, 2.2613837718963623, 0.723608493804932]), duration=3.0)
     target_pos = controller.cur_targ_pos.copy()
     last_tp = time.time()
     dur = 0.0
