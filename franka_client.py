@@ -1,7 +1,6 @@
-import websockets
+import websocket
 import json
 import numpy as np
-import asyncio
 import time
 
 import pygame
@@ -11,38 +10,38 @@ class FrankaClient:
         self.uri = f"ws://{ip_address}:{port}"
         self.websocket = None
 
-    async def ensure_connect(self):
-        if self.websocket is None or self.websocket.closed:
-            self.websocket = await websockets.connect(self.uri)
+    def ensure_connect(self):
+        if self.websocket is None or not self.websocket.connected:
+            self.websocket = websocket.create_connection(self.uri)
 
 
-    async def get_pos(self):
-        await self.ensure_connect()
+    def get_pos(self):
+        self.ensure_connect()
         message = json.dumps({"type": "get"})
-        await self.websocket.send(message)
-        response = await self.websocket.recv()
+        self.websocket.send(message)
+        response = self.websocket.recv()
         data = json.loads(response)
         return np.array(data["ee_pos"]), np.array(data["targ_pos"])
     
-    async def set_pos(self, targ_pos):
-        await self.ensure_connect()
+    def set_pos(self, targ_pos):
+        self.ensure_connect()
         message = json.dumps({"type": "set", "targ_pos": targ_pos.tolist()})
-        await self.websocket.send(message)
+        self.websocket.send(message)
 
-    async def reset(self):
-        await self.ensure_connect()
+    def reset(self):
+        self.ensure_connect()
         message = json.dumps({"type": "setq", "q_targ": [-0.08129526674747467, -0.09338368475437164, 0.02063392661511898, -2.354853630065918, 0.002519397297874093, 2.2613837718963623, 0.723608493804932]})
-        await self.websocket.send(message)
-        response = await self.websocket.recv()
+        self.websocket.send(message)
+        response = self.websocket.recv()
         data = json.loads(response)
         return np.array(data["ee_pos"]), np.array(data["targ_pos"])
     
-    async def close(self):
+    def close(self):
         if self.websocket is not None:
-            await self.websocket.close()
+            self.websocket.close()
             self.websocket = None
 
-async def main():
+def main():
 
     import argparse
     parser = argparse.ArgumentParser()
@@ -58,7 +57,7 @@ async def main():
     pygame.joystick.init()
 
     while True:
-        ee_pos, targ_pos = await client.get_pos()
+        ee_pos, targ_pos = client.get_pos()
         print(f"End-effector position: {ee_pos}, Target position: {targ_pos}")
         cur_tp = time.time()
         dur = cur_tp - last_tp
@@ -84,17 +83,17 @@ async def main():
               # if button 1 pressed, terminate
 
             if joystick.get_button(3):
-                ee_pos, targ_pos = await client.reset()
+                ee_pos, targ_pos = client.reset()
                 print(f"Robot reset. End-effector position: {ee_pos}, Target position: {targ_pos}")
 
             if joystick.get_button(1):
                 print("Exiting joystick control.")
-                await client.close()
+                client.close()
                 break
 
         new_targ_pos = targ_pos + move_vel * dur
         print(f"Setting new target position: {new_targ_pos}")
-        await client.set_pos(new_targ_pos)
+        client.set_pos(new_targ_pos)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
